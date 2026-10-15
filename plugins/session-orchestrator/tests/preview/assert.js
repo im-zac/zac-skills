@@ -1,0 +1,34 @@
+// 預覽頁的自動檢查：結果寫進 document.title 與 #test-results。
+setTimeout(function () {
+  const out = [];
+  const check = (name, ok) => out.push((ok ? "ok   " : "FAIL ") + name);
+  const names = () => [...document.querySelectorAll("#main article.card[data-name]")].map((c) => c.dataset.name);
+  const card = (n) => document.querySelector(`#main [data-name="${n}"]`);
+  const click = (key) => document.querySelector(`#tab-${key}`).click();
+  click("running");
+  check("執行中的排序：等你 → 卡住 → 進行中 → 未回報", names().join(",") === "tai-1302,blocker,weekly,fresh");
+  check("超過 30 分鐘沒回報的 active 卡片標黃", !!card("weekly") && card("weekly").classList.contains("stale"));
+  check("剛回報的卡片不標黃", !!card("tai-1302") && !card("tai-1302").classList.contains("stale"));
+  check("背景工作列出 2 筆", !!card("tai-1302") && card("tai-1302").querySelectorAll("ul.bg li").length === 2);
+  check("沒有 reports 的卡片顯示「未回報」", !!card("fresh") && card("fresh").textContent.includes("未回報"));
+  check("頂端統計有「等你 1」", [...document.querySelectorAll("#tally .pill")].some((p) => p.textContent === "等你 1"));
+  check("執行中分頁數字是 4", document.querySelector("#tab-running .count").textContent === "4");
+  check("頂端有 orchestrator 的 resume 指令", document.querySelector("#self").textContent.includes("claude -r 11111111-2222-3333-4444-555555555555 -n session-orchestrator"));
+  click("parked");
+  check("已封存分頁含 archived 與 lost，新的在前", names().join(",") === "old-probe,data-fetcher");
+  check("archived 卡片顯示交接筆記", !!card("data-fetcher") && !!card("data-fetcher").querySelector(".handoff"));
+  check("lost 且沒有 handoff 的卡片仍正常顯示", !!card("old-probe") && !!card("old-probe").querySelector(".tid"));
+  check("已封存卡片有 resume 複製鍵", !!card("data-fetcher") && [...card("data-fetcher").querySelectorAll("button")].some((b) => b.textContent === "resume"));
+  click("closed");
+  check("已結束分頁只有 done-task", names().join(",") === "done-task");
+  click("decide");
+  check("決策分頁有 D-001", !!document.querySelector("#main .dec"));
+  click("running");
+  check("沒有橫向捲動", document.documentElement.scrollWidth <= window.innerWidth);
+  const fails = out.filter((l) => l.startsWith("FAIL")).length;
+  document.title = fails ? `FAIL ${fails}` : `PASS ${out.length}`;
+  const pre = document.createElement("pre");
+  pre.id = "test-results";
+  pre.textContent = out.join("\n");
+  document.body.append(pre);
+}, 500);

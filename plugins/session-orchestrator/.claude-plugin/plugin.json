@@ -1,0 +1,18 @@
+{
+  "name": "session-orchestrator",
+  "description": "用一個 orchestrator session 在 tmux 裡開出、archive、resume、close 其他 Claude Code session，並在 artifact 總表看每個 session 的狀態。",
+  "author": {
+    "name": "im-zac",
+    "url": "https://github.com/im-zac"
+  },
+  "homepage": "https://github.com/im-zac/zac-skills/tree/main/plugins/session-orchestrator",
+  "repository": "https://github.com/im-zac/zac-skills",
+  "license": "MIT",
+  "keywords": [
+    "session",
+    "orchestrator",
+    "tmux",
+    "artifact",
+    "resume"
+  ]
+}

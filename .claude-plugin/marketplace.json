@@ -1,0 +1,32 @@
+{
+  "name": "zac-skills",
+  "description": "im-zac 的 Claude Code plugins",
+  "owner": {
+    "name": "im-zac",
+    "url": "https://github.com/im-zac"
+  },
+  "plugins": [
+    {
+      "name": "worklog",
+      "description": "把 Claude Code session 的工作、進度、決策記在一個隨時能打開看的 artifact 頁面；有重要進展或需要決策時推播通知。",
+      "author": {
+        "name": "im-zac",
+        "url": "https://github.com/im-zac"
+      },
+      "source": "./plugins/worklog",
+      "category": "productivity",
+      "homepage": "https://github.com/im-zac/zac-skills/tree/main/plugins/worklog"
+    },
+    {
+      "name": "session-orchestrator",
+      "description": "用一個 orchestrator session 在 tmux 裡開出、archive、resume、close 其他 Claude Code session，並在 artifact 總表看每個 session 的狀態。",
+      "author": {
+        "name": "im-zac",
+        "url": "https://github.com/im-zac"
+      },
+      "source": "./plugins/session-orchestrator",
+      "category": "productivity",
+      "homepage": "https://github.com/im-zac/zac-skills/tree/main/plugins/session-orchestrator"
+    }
+  ]
+}

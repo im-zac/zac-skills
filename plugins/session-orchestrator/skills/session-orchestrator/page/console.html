@@ -1,0 +1,487 @@
+<title>Session 總表</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: sticky header + data-driven tabs (one per work area, then 決策 and 時間軸); cards in one column. */
+:root {
+  --bg: #f6f6fb;
+  --surface: #ffffff;
+  --surface-2: #eeeef8;
+  --fg: #1b1b2a;
+  --muted: #5d5d75;
+  --line: #dcdcea;
+  --accent: #5557e8;
+  --accent-soft: #e6e6ff;
+  --ok: #1f8a5b;
+  --ok-soft: #dff3e9;
+  --warn: #a5650a;
+  --warn-soft: #fbefd9;
+  --bad: #b3373b;
+  --bad-soft: #f8e1e1;
+  --info: #1f6fb8;
+  --info-soft: #ddebf9;
+  --idle: #6b6b80;
+  --idle-soft: #ececf2;
+  --font-body: "IBM Plex Sans", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12121b; --surface: #1b1b27; --surface-2: #242434; --fg: #e9e9f4; --muted: #a3a3bb; --line: #303045;
+    --accent: #8d8fff; --accent-soft: #2a2a4d;
+    --ok: #5cc995; --ok-soft: #173327; --warn: #e9ad55; --warn-soft: #3a2a12; --bad: #ef7d80; --bad-soft: #3d1c1e;
+    --info: #6fb0ec; --info-soft: #172b40; --idle: #a0a0b5; --idle-soft: #2a2a38;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12121b; --surface: #1b1b27; --surface-2: #242434; --fg: #e9e9f4; --muted: #a3a3bb; --line: #303045;
+  --accent: #8d8fff; --accent-soft: #2a2a4d;
+  --ok: #5cc995; --ok-soft: #173327; --warn: #e9ad55; --warn-soft: #3a2a12; --bad: #ef7d80; --bad-soft: #3d1c1e;
+  --info: #6fb0ec; --info-soft: #172b40; --idle: #a0a0b5; --idle-soft: #2a2a38;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.6; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; }
+
+header.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.top-inner { display: flex; flex-direction: column; gap: 10px; padding-block: 14px 0; }
+.title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+h1 { margin: 0; font-size: 1.35rem; letter-spacing: 0.01em; text-wrap: balance; }
+.stamp { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.focus { display: flex; gap: 10px; align-items: flex-start; background: var(--accent-soft); border-radius: var(--r); padding: 8px 12px; font-size: 0.92rem; }
+.focus b { color: var(--accent); white-space: nowrap; }
+nav.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+nav.tabs button {
+  appearance: none; border: 0; background: none; color: var(--muted); font: inherit; font-weight: 500;
+  padding: 8px 12px 10px; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+nav.tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+nav.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+.count { font-family: var(--font-mono); font-size: 0.75rem; background: var(--surface-2); color: var(--muted); border-radius: 999px; padding: 0 7px; }
+.count.hot { background: var(--warn-soft); color: var(--warn); font-weight: 600; }
+
+main { padding-block: 18px 48px; display: flex; flex-direction: column; gap: 14px; }
+.section-note { color: var(--muted); font-size: 0.88rem; margin: 0; }
+.group-label { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 8px 0 -4px; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.tid { font-family: var(--font-mono); font-weight: 600; font-size: 0.88rem; }
+.ctitle { font-weight: 600; flex: 1 1 260px; min-width: 0; text-wrap: balance; }
+.pill { font-size: 0.75rem; font-weight: 600; border-radius: 999px; padding: 1px 9px; white-space: nowrap; }
+.pill.done { background: var(--ok-soft); color: var(--ok); }
+.pill.active { background: var(--info-soft); color: var(--info); }
+.pill.waiting { background: var(--warn-soft); color: var(--warn); }
+.pill.blocked { background: var(--bad-soft); color: var(--bad); }
+.pill.todo { background: var(--idle-soft); color: var(--idle); }
+.summary { margin: 0; color: var(--fg); overflow-wrap: anywhere; }
+.status-text { margin: 0; font-size: 0.9rem; color: var(--muted); overflow-wrap: anywhere; }
+.status-text b { color: var(--fg); font-weight: 600; }
+
+.bar { display: flex; align-items: center; gap: 10px; }
+.track { flex: 1; height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.fill { height: 100%; background: var(--accent); border-radius: 999px; }
+.fill.complete { background: var(--ok); }
+.frac { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 3.2em; text-align: right; }
+
+ul.tasks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+ul.tasks li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; font-size: 0.92rem; align-items: start; }
+ul.tasks li span { min-width: 0; overflow-wrap: anywhere; }
+.box { width: 14px; height: 14px; margin-top: 4px; border-radius: 4px; border: 1.5px solid var(--line); display: grid; place-items: center; }
+.box.on { background: var(--ok); border-color: var(--ok); }
+.box.on::after { content: ""; width: 7px; height: 4px; border-left: 2px solid var(--surface); border-bottom: 2px solid var(--surface); transform: rotate(-45deg) translate(1px, -1px); }
+.box.now { border-color: var(--info); }
+.box.now::after { content: ""; width: 6px; height: 6px; background: var(--info); border-radius: 2px; }
+li.is-done span { color: var(--muted); }
+
+.links { display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 0.85rem; align-items: center; }
+.chip { font-family: var(--font-mono); font-size: 0.8rem; background: var(--surface-2); border-radius: 6px; padding: 1px 7px; overflow-wrap: anywhere; }
+.upd { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); margin-left: auto; }
+
+details.donebox > summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; padding: 6px 2px; list-style: none; }
+details.donebox > summary::-webkit-details-marker { display: none; }
+details.donebox > summary::before { content: "▸ "; }
+details.donebox[open] > summary::before { content: "▾ "; }
+details.donebox > div { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+
+/* decisions */
+.dec { border-left: 3px solid var(--warn); }
+.dec.answered { border-left-color: var(--ok); }
+.dec h3 { margin: 0; font-size: 1rem; text-wrap: balance; }
+.dec .q { margin: 0; font-weight: 500; }
+.kv { display: grid; grid-template-columns: 4.5em 1fr; gap: 4px 10px; font-size: 0.92rem; margin: 0; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.opts { display: flex; flex-direction: column; gap: 8px; }
+.opt { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--surface); }
+.opt.rec { border-color: var(--accent); background: var(--accent-soft); }
+.opt .ol { font-weight: 600; min-width: 0; }
+.opt .ol .key { font-family: var(--font-mono); color: var(--accent); margin-right: 6px; }
+.opt .rec-tag { font-size: 0.72rem; font-weight: 600; color: var(--accent); margin-left: 6px; }
+.opt .od { grid-column: 1; font-size: 0.88rem; color: var(--muted); min-width: 0; }
+.copy {
+  grid-row: 1 / span 2; grid-column: 2;
+  appearance: none; font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--accent); color: var(--accent); background: var(--surface); border-radius: 7px; padding: 6px 12px; white-space: nowrap;
+}
+.copy:hover { background: var(--accent); color: var(--surface); }
+.copy.ok { border-color: var(--ok); color: var(--ok); }
+.copy.ok:hover { background: var(--ok); color: var(--surface); }
+.answer { font-size: 0.92rem; background: var(--ok-soft); color: var(--fg); border-radius: 8px; padding: 6px 10px; overflow-wrap: anywhere; }
+.answer b { color: var(--ok); }
+textarea.fallback { width: 100%; font-family: var(--font-mono); font-size: 0.8rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); color: var(--fg); padding: 6px; }
+
+/* timeline */
+ol.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+ol.timeline li { display: grid; grid-template-columns: 6.2em 12px 1fr; gap: 0 12px; align-items: start; padding-block: 6px; }
+.t-at { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; text-align: right; }
+.t-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; background: var(--idle); box-shadow: 0 0 0 3px var(--bg); }
+.t-dot.done { background: var(--ok); }
+.t-dot.decision { background: var(--accent); }
+.t-dot.blocker { background: var(--bad); }
+.t-dot.start { background: var(--info); }
+.t-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.t-text { overflow-wrap: anywhere; font-size: 0.93rem; }
+.t-ref { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+.t-day { font-size: 0.75rem; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; margin: 10px 0 2px; }
+
+.empty { border: 1px dashed var(--line); border-radius: var(--r); padding: 22px; text-align: center; color: var(--muted); font-size: 0.92rem; }
+@media (max-width: 520px) {
+  .opt { grid-template-columns: 1fr; }
+  .copy { grid-row: auto; grid-column: 1; justify-self: start; }
+  .upd { margin-left: 0; width: 100%; }
+  ol.timeline li { grid-template-columns: 4.6em 12px 1fr; gap: 0 8px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .fill { transition: width 400ms ease; }
+}
+/* session-orchestrator 追加 */
+.card.stale { border-color: var(--warn); box-shadow: inset 3px 0 0 var(--warn); }
+.upd.warn { color: var(--warn); font-weight: 600; }
+.pill.life { background: var(--surface-2); color: var(--muted); }
+.task { margin: 0; color: var(--muted); font-size: 0.9rem; overflow-wrap: anywhere; }
+ul.bg { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+ul.bg li { display: flex; gap: 8px; align-items: baseline; font-size: 0.9rem; min-width: 0; }
+ul.bg li span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.kind { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 600; border-radius: 6px; padding: 0 6px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.kind.monitor { background: var(--info-soft); color: var(--info); }
+.kind.subagent { background: var(--accent-soft); color: var(--accent); }
+.kind.loop { background: var(--warn-soft); color: var(--warn); }
+.handoff { background: var(--surface-2); border-radius: 8px; padding: 8px 12px; }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.copy.small { grid-row: auto; grid-column: auto; font-family: var(--font-mono); font-size: 0.78rem; padding: 4px 10px; }
+.meta-line { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); overflow-wrap: anywhere; }
+.tally { display: flex; flex-wrap: wrap; gap: 6px; }
+.tally:empty { display: none; }
+.self { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 0.82rem; color: var(--muted); }
+.self .chip { max-width: 100%; }
+@media (max-width: 520px) { .self .chip { display: none; } }
+</style>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <div class="title-row">
+      <h1 id="h1">Session 總表</h1>
+      <span class="stamp" id="stamp">等待資料…</span>
+    </div>
+    <div class="tally" id="tally"></div>
+    <div class="focus" id="focus" hidden><b>現在</b><span id="focus-text"></span></div>
+    <div class="self" id="self" hidden></div>
+    <nav class="tabs" role="tablist" aria-label="分類" id="tabs"></nav>
+  </div>
+</header>
+
+<main class="wrap" id="main" aria-live="polite">
+  <div class="empty" id="boot">正在讀取 session 總表。資料由 orchestrator 與子 session 寫入，有變化時這裡會即時更新。</div>
+</main>
+
+<script>
+(function () {
+  const TABS = [
+    { key: "running", label: "執行中", note: "orchestrator 開出、目前在跑的 session。按 tmux attach 複製切換指令；按 archive 複製要貼給 orchestrator 的指令。" },
+    { key: "parked", label: "已封存", note: "已 archive 或 process 遺失的 session。按 resume 複製要貼給 orchestrator 的指令。" },
+    { key: "closed", label: "已結束", note: "做完、不會再叫回來的 session。" },
+    { key: "decide", label: "決策", note: "等你拍板的事項。按選項右側的按鈕會複製「問題＋回答」，貼回 orchestrator 即可。" },
+    { key: "log", label: "時間軸", note: "spawn、archive、resume 與子 session 的事件，最新的在最上面。" }
+  ];
+  const TAB_OF = { running: "running", archived: "parked", lost: "parked", closed: "closed" };
+  const LIFE = { archived: "已封存", lost: "遺失", closed: "已結束" };
+  const STATUS = { waiting: "等你", blocked: "卡住", active: "進行中", done: "完成" };
+  const ORDER = { waiting: 0, blocked: 1, active: 2, done: 3 };
+  const KINDS = ["shell", "monitor", "subagent", "loop"];
+  const STALE_MS = 30 * 60 * 1000;
+  const state = { sessions: [], reports: {}, decisions: [], log: [], meta: null, tab: "running" };
+
+  try { const s = localStorage.getItem("so-tab"); if (s && TABS.some((t) => t.key === s)) state.tab = s; } catch (e) {}
+
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = localize(text); return n; };
+  const pad = (x) => String(x).padStart(2, "0");
+  // 時間一律以 UTC ISO 儲存，顯示成檢視者的本地時間。
+  const fmt = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso); if (isNaN(d)) return String(iso);
+    return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+  const ISO_UTC = /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?Z\b/g;
+  const localize = (s) => typeof s === "string" ? s.replace(ISO_UTC, fmt) : s;
+  const safeUrl = (u) => (typeof u === "string" && /^https?:\/\//.test(u)) ? u : null;
+
+  function linkChip(ref) {
+    const label = typeof ref === "string" ? ref : (ref && (ref.label || ref.url)) || "";
+    const url = typeof ref === "string" ? safeUrl(ref) : safeUrl(ref && ref.url);
+    if (!url) return el("span", "chip", label);
+    const a = el("a", "chip", label); a.href = url; a.target = "_blank"; a.rel = "noopener"; return a;
+  }
+
+  const reportOf = (s) => state.reports[s.id] || {};
+  const tabOf = (s) => TAB_OF[s.lifecycle] || "running";
+
+  function since(iso) {
+    const t = Date.parse(iso || "");
+    if (isNaN(t)) return "尚未回報";
+    const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+    if (m < 1) return "剛剛回報";
+    if (m < 60) return `最後回報 ${m} 分鐘前`;
+    const h = Math.floor(m / 60);
+    if (h < 48) return `最後回報 ${h} 小時前`;
+    return `最後回報 ${Math.floor(h / 24)} 天前`;
+  }
+
+  function isStale(s) {
+    const r = reportOf(s);
+    if (s.lifecycle !== "running" || r.status !== "active") return false;
+    const t = Date.parse(r.lastReportAt || "");
+    return !isNaN(t) && Date.now() - t > STALE_MS;
+  }
+
+  async function copyText(btn, text, holder) {
+    const label = btn.dataset.label;
+    let ok = false;
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(text); ok = true; } } catch (e) { ok = false; }
+    if (ok) {
+      btn.textContent = "已複製"; btn.classList.add("ok");
+      setTimeout(() => { btn.textContent = label; btn.classList.remove("ok"); }, 1800);
+      return;
+    }
+    let ta = holder.querySelector("textarea.fallback");
+    if (!ta) { ta = el("textarea", "fallback"); ta.rows = 2; ta.readOnly = true; ta.setAttribute("aria-label", "要複製的文字"); holder.append(ta); }
+    ta.value = text; ta.focus(); ta.select();
+    btn.textContent = "已選取，請按複製";
+  }
+
+  function copyButton(label, text, holder, cls) {
+    const b = el("button", "copy" + (cls ? " " + cls : ""), label);
+    b.type = "button"; b.dataset.label = label;
+    b.addEventListener("click", () => copyText(b, text, holder));
+    return b;
+  }
+
+  function sessionCard(s) {
+    const r = reportOf(s);
+    const stale = isStale(s);
+    const c = el("article", "card" + (stale ? " stale" : ""));
+    c.dataset.name = s.id;
+    const head = el("div", "card-head");
+    head.append(el("span", "tid", s.id), el("span", "ctitle", r.focus || s.task || ""));
+    if (LIFE[s.lifecycle]) head.append(el("span", "pill life", LIFE[s.lifecycle]));
+    head.append(el("span", "pill " + (STATUS[r.status] ? r.status : "todo"), STATUS[r.status] || "未回報"));
+    c.append(head);
+    if (s.task && r.focus) c.append(el("p", "task", "任務：" + s.task));
+    if (r.statusText) { const p = el("p", "status-text"); p.append(el("b", "", "進度："), document.createTextNode(localize(r.statusText))); c.append(p); }
+    const bg = Array.isArray(r.background) ? r.background : [];
+    if (bg.length && s.lifecycle === "running") {
+      const ul = el("ul", "bg");
+      for (const b of bg) {
+        const kind = (b && b.kind) || "?";
+        const li = el("li", "");
+        li.append(el("span", "kind" + (KINDS.includes(kind) ? " " + kind : ""), kind), el("span", "", (b && b.label) || ""));
+        ul.append(li);
+      }
+      c.append(ul);
+    }
+    const h = r.handoff;
+    if (s.lifecycle !== "running" && h && typeof h === "object") {
+      const kv = el("dl", "kv handoff");
+      if (h.now) kv.append(el("dt", "", "現況"), el("dd", "", h.now));
+      if (h.next) kv.append(el("dt", "", "下一步"), el("dd", "", h.next));
+      const rs = Array.isArray(h.restart) ? h.restart : [];
+      if (rs.length) kv.append(el("dt", "", "重啟"), el("dd", "", rs.map((x) => typeof x === "string" ? x : (x && x.label) || "").join("；")));
+      if (h.writtenAt) kv.append(el("dt", "", "寫於"), el("dd", "", fmt(h.writtenAt)));
+      if (kv.childNodes.length) c.append(kv);
+    }
+    const links = el("div", "links");
+    if (Array.isArray(r.links)) r.links.forEach((l) => links.append(linkChip(l)));
+    links.append(el("span", "upd" + (stale ? " warn" : ""), since(r.lastReportAt)));
+    c.append(links);
+    const acts = el("div", "acts");
+    if (s.lifecycle === "running") {
+      acts.append(copyButton("tmux attach", `tmux attach -t ${s.tmux || s.id}`, c, "small"), copyButton("archive", `archive ${s.id}`, c, "small"));
+    } else if (s.lifecycle === "archived" || s.lifecycle === "lost") {
+      acts.append(copyButton("resume", `resume ${s.id}`, c, "small"));
+    }
+    if (acts.childNodes.length) c.append(acts);
+    const ml = [s.cwd, s.sessionId].filter(Boolean).join(" · ");
+    if (ml) c.append(el("div", "meta-line", ml));
+    return c;
+  }
+
+  function decisionCard(d) {
+    const answered = d.status === "answered";
+    const c = el("article", "card dec" + (answered ? " answered" : ""));
+    const head = el("div", "card-head");
+    head.append(el("span", "tid", d.id), el("h3", "ctitle", d.title || ""), el("span", "pill " + (answered ? "done" : "waiting"), answered ? "已決定" : "待決定"));
+    c.append(head);
+    if (d.question) c.append(el("p", "q", d.question));
+    const kv = el("dl", "kv");
+    if (d.context) kv.append(el("dt", "", "背景"), el("dd", "", d.context));
+    if (d.analysis) kv.append(el("dt", "", "分析"), el("dd", "", d.analysis));
+    if (d.recommendation) kv.append(el("dt", "", "建議"), el("dd", "", d.recommendation));
+    if (Array.isArray(d.refs) && d.refs.length) {
+      const dd = el("dd", ""); dd.style.display = "flex"; dd.style.flexWrap = "wrap"; dd.style.gap = "6px";
+      d.refs.forEach((r) => dd.append(linkChip(r)));
+      kv.append(el("dt", "", "相關"), dd);
+    }
+    if (kv.childNodes.length) c.append(kv);
+    if (answered) {
+      const a = el("div", "answer"); a.append(el("b", "", "回答："), document.createTextNode(localize(d.answer || "")));
+      c.append(a);
+    } else if (Array.isArray(d.options) && d.options.length) {
+      const opts = el("div", "opts");
+      for (const o of d.options) {
+        const row = el("div", "opt" + (o.recommended ? " rec" : ""));
+        const ol = el("div", "ol"); ol.append(el("span", "key", o.key || ""), document.createTextNode(localize(o.label || "")));
+        if (o.recommended) ol.append(el("span", "rec-tag", "建議"));
+        const text = `【${d.id}】${d.question || d.title}\n回答：${o.key ? o.key + "｜" : ""}${o.label}`;
+        row.append(ol, copyButton("複製回答", text, row));
+        if (o.detail) row.append(el("div", "od", o.detail));
+        opts.append(row);
+      }
+      c.append(opts);
+    }
+    return c;
+  }
+
+  function renderLog(main) {
+    const rows = state.log.slice().sort((a, b) => String(b.at || "").localeCompare(String(a.at || ""))).slice(0, 300);
+    if (!rows.length) { main.append(el("div", "empty", "還沒有紀錄。")); return; }
+    const ol = el("ol", "timeline");
+    let day = "";
+    for (const r of rows) {
+      const d = new Date(r.at); const dk = isNaN(d) ? "" : `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      if (dk && dk !== day) { day = dk; const h = el("li", ""); h.style.display = "block"; h.append(el("div", "t-day", dk)); ol.append(h); }
+      const li = el("li", "");
+      li.append(el("span", "t-at", isNaN(d) ? "" : `${pad(d.getHours())}:${pad(d.getMinutes())}`), el("i", "t-dot " + (r.kind || "")));
+      const body = el("div", "t-body"); body.append(el("span", "t-text", r.text || ""));
+      if (r.ref) body.append(el("span", "t-ref", r.ref));
+      li.append(body); ol.append(li);
+    }
+    main.append(ol);
+  }
+
+  function render() {
+    const main = $("main");
+    main.replaceChildren();
+    const tab = TABS.find((t) => t.key === state.tab) || TABS[0];
+    main.append(el("p", "section-note", tab.note));
+    if (tab.key === "decide") {
+      const open = state.decisions.filter((d) => d.status !== "answered").sort((a, b) => String(a.id).localeCompare(String(b.id)));
+      const ans = state.decisions.filter((d) => d.status === "answered").sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+      if (!open.length) main.append(el("div", "empty", "目前沒有等你決定的事。"));
+      open.forEach((d) => main.append(decisionCard(d)));
+      if (ans.length) {
+        const det = el("details", "donebox"); det.append(el("summary", "", `已決定 ${ans.length} 項`));
+        const box = el("div"); ans.forEach((d) => box.append(decisionCard(d))); det.append(box); main.append(det);
+      }
+      return;
+    }
+    if (tab.key === "log") { renderLog(main); return; }
+    const list = state.sessions.filter((s) => tabOf(s) === tab.key);
+    if (tab.key === "running") {
+      list.sort((a, b) => (ORDER[reportOf(a).status] ?? 9) - (ORDER[reportOf(b).status] ?? 9)
+        || String(reportOf(b).lastReportAt || "").localeCompare(String(reportOf(a).lastReportAt || "")));
+    } else {
+      list.sort((a, b) => String(b.archivedAt || b.spawnedAt || "").localeCompare(String(a.archivedAt || a.spawnedAt || "")));
+    }
+    if (!list.length) {
+      main.append(el("div", "empty", tab.key === "running" ? "目前沒有執行中的 session。對 orchestrator 說「開一個 session 處理…」，它就會出現在這裡。" : "這個分類目前是空的。"));
+      return;
+    }
+    list.forEach((s) => main.append(sessionCard(s)));
+  }
+
+  function tabButton(t, countText, hot) {
+    const b = el("button", ""); b.type = "button"; b.setAttribute("role", "tab"); b.id = "tab-" + t.key;
+    b.append(document.createTextNode(t.label + " "));
+    b.append(el("span", "count" + (hot ? " hot" : ""), countText));
+    b.setAttribute("aria-selected", String(state.tab === t.key));
+    b.addEventListener("click", () => {
+      state.tab = t.key;
+      try { localStorage.setItem("so-tab", t.key); } catch (e) {}
+      renderChrome(); render();
+    });
+    return b;
+  }
+
+  function renderChrome() {
+    const running = state.sessions.filter((s) => tabOf(s) === "running");
+    const urgent = running.some((s) => reportOf(s).status === "waiting" || reportOf(s).status === "blocked");
+    const openDec = state.decisions.filter((d) => d.status !== "answered").length;
+    const counts = {
+      running: [String(running.length), urgent],
+      parked: [String(state.sessions.filter((s) => tabOf(s) === "parked").length), false],
+      closed: [String(state.sessions.filter((s) => tabOf(s) === "closed").length), false],
+      decide: [String(openDec), openDec > 0],
+      log: [String(state.log.length), false]
+    };
+    const nav = $("tabs"); nav.replaceChildren();
+    for (const t of TABS) nav.append(tabButton(t, counts[t.key][0], counts[t.key][1]));
+    const tally = $("tally"); tally.replaceChildren();
+    for (const k of Object.keys(STATUS)) {
+      const n = running.filter((s) => reportOf(s).status === k).length;
+      if (n) tally.append(el("span", "pill " + k, `${STATUS[k]} ${n}`));
+    }
+    const m = state.meta;
+    if (!m) return;
+    $("stamp").textContent = "最後更新 " + fmt(m.updatedAt);
+    if (m.focus) { $("focus").hidden = false; $("focus-text").textContent = localize(m.focus); } else { $("focus").hidden = true; }
+    const self = $("self"); self.replaceChildren();
+    if (m.sessionId) {
+      const cmd = (m.cwd ? `cd '${m.cwd}' && ` : "") + `claude -r ${m.sessionId} -n session-orchestrator`;
+      self.hidden = false;
+      self.append(el("span", "", "重開機後叫回 orchestrator："), el("span", "chip", cmd), copyButton("複製", cmd, self, "small"));
+    } else {
+      self.hidden = true;
+    }
+  }
+
+  renderChrome();
+
+  (async () => {
+    const db = window.claude && window.claude.use ? await window.claude.use("db") : null;
+    if (!db) { $("main").replaceChildren(el("div", "empty", "這個檢視讀不到 session 總表資料。請登入 claude.ai 後再開啟。")); return; }
+    const onErr = () => { $("stamp").textContent = "資料連線中斷，重新整理頁面即可恢復"; };
+    const refresh = () => { renderChrome(); render(); };
+    const rows = (snap) => snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+    db.collection("sessions").onSnapshot((snap) => { state.sessions = rows(snap); refresh(); }, onErr);
+    db.collection("reports").onSnapshot((snap) => { const m = {}; rows(snap).forEach((r) => { m[r.id] = r; }); state.reports = m; refresh(); }, onErr);
+    db.collection("decisions").onSnapshot((snap) => { state.decisions = rows(snap); refresh(); }, onErr);
+    db.collection("log").onSnapshot((snap) => { state.log = rows(snap); refresh(); }, onErr);
+    db.doc("meta/orchestrator").onSnapshot((snap) => { state.meta = snap.exists ? snap.data() : null; refresh(); }, onErr);
+    setInterval(render, 60000);
+  })();
+})();
+</script>

@@ -1,0 +1,18 @@
+{
+  "name": "worklog",
+  "description": "把 Claude Code session 的工作、進度、決策記在一個隨時能打開看的 artifact 頁面；有重要進展或需要決策時推播通知。",
+  "author": {
+    "name": "im-zac",
+    "url": "https://github.com/im-zac"
+  },
+  "homepage": "https://github.com/im-zac/zac-skills/tree/main/plugins/worklog",
+  "repository": "https://github.com/im-zac/zac-skills",
+  "license": "MIT",
+  "keywords": [
+    "worklog",
+    "artifact",
+    "session",
+    "decision",
+    "notification"
+  ]
+}
