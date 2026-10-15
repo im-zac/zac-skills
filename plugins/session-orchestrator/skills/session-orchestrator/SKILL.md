@@ -40,28 +40,40 @@ disable-model-invocation: true
    2. 參考 `sessions/` 裡其他 session 的 `repo`。
    3. 仍不確定就問使用者。
 3. `ArtifactData get sessions/<name>`。文件已存在就請使用者換名稱。
-4. 用 Write 工具把 start prompt 寫進 `<scratchpad>/spawn-<name>.txt`（shell 的 heredoc 會展開 `$` 與反引號）。`<子 skill 指令>` 是 `so.sh child-cmd` 的輸出：
+4. 依任務選模型與 effort，用一次 `AskUserQuestion` 請使用者確認，確認後才往下做：
+   - 兩題：「模型」「effort」。每題 2 個選項：建議值（標 `(Recommended)`）與另一個合理的值，各附一句理由。使用者選「Other」填的值照用。
+   - 依據：
+
+     | 任務 | 模型 | effort |
+     |--|--|--|
+     | 範圍明確、照固定步驟做（改文案、跑指令查結果、整理資料） | `haiku` | `low`｜`medium` |
+     | 一般開發（修 bug、加功能、寫測試、review） | `sonnet` | `high` |
+     | 需要深度推理（架構設計、難查的 bug、跨多處的大改動） | `opus` | `high`｜`xhigh` |
+     | 最難的任務（全新系統設計、`opus` 已經卡住的問題） | `fable` | `xhigh`｜`max` |
+
+   - 這一步用 `AskUserQuestion`，不開決策卡。
+5. 用 Write 工具把 start prompt 寫進 `<scratchpad>/spawn-<name>.txt`（shell 的 heredoc 會展開 `$` 與反引號）。`<子 skill 指令>` 是 `so.sh child-cmd` 的輸出：
    ```
    <子 skill 指令> start <總表網址> session-orchestrator <name>
    <任務說明>
    ```
    任務說明要讓子 session 不必回頭問就能開工：使用者的原話、相關票號與連結、完成條件。只寫使用者給的與查得到的事實。
-5. 執行 `so.sh spawn <name> <repo> <scratchpad>/spawn-<name>.txt`。
+6. 執行 `so.sh spawn <name> <repo> <scratchpad>/spawn-<name>.txt <model> <effort>`。
 
    | 退出碼 | 意思 | 處理 |
    |--|--|--|
-   | 0 | 成功，stdout 是 JSON：`pid`、`sessionId`、`name`、`cwd`、`repo`、`tmux` | 繼續第 6 步 |
+   | 0 | 成功，stdout 是 JSON：`pid`、`sessionId`、`name`、`cwd`、`repo`、`tmux` | 繼續第 7 步 |
    | 1 | 參數錯誤 | 依 stderr 改正後重試 |
    | 2 | repo 還沒接受資料夾信任 | 請使用者在該 repo 執行一次 `claude` 並接受信任，再重試 |
    | 3 | 同名 tmux session 已存在 | 請使用者換名稱 |
    | 4 | 30 秒內 registry 沒出現 | 把 stderr（含 uuid 與 pane 最後幾行）給使用者，問使用者要不要用 `so.sh stop <uuid> <name>` 清掉 |
    | 5 | repo 目錄不存在 | 問使用者 |
 
-6. 一個 `batch`：
-   - `set sessions/<name>`：`sessionId`、`repo`、`cwd`、`tmux`（取 JSON 裡的值）、`task`（任務一句話摘要）、`lifecycle: "running"`、`spawnedAt`。
+7. 一個 `batch`：
+   - `set sessions/<name>`：`sessionId`、`repo`、`cwd`、`tmux`（取 JSON 裡的值）、`task`（任務一句話摘要）、`model`、`effort`、`lifecycle: "running"`、`spawnedAt`。
    - `set log/<id>`：`kind: "start"`、`text: "spawn <name>"`、`ref: "<name>"`。
    - `update meta/orchestrator`：`focus`、`updatedAt`。
-7. 回覆使用者：名稱、`cwd`、切換指令 `tmux attach -t <name>`。
+8. 回覆使用者：名稱、`cwd`、模型與 effort、切換指令 `tmux attach -t <name>`。
 
 ### archive
 
@@ -91,7 +103,7 @@ worktree 一律保留，resume 要用它。
    ```
    <子 skill 指令> resume <總表網址> session-orchestrator <name>
    ```
-3. 執行 `so.sh resume <name> <sessionId> <cwd> <scratchpad>/resume-<name>.txt`。
+3. 執行 `so.sh resume <name> <sessionId> <cwd> <scratchpad>/resume-<name>.txt <model> <effort>`，`model`、`effort` 取 `sessions/<name>` 的值，沒有的欄位傳 `""`。明確傳入，resume 後才確定是原本的模型與 effort。
 
    | 退出碼 | 意思 | 處理 |
    |--|--|--|
@@ -136,7 +148,7 @@ worktree 一律保留，resume 要用它。
 | 路徑 | 欄位 |
 |--|--|
 | `meta/orchestrator` | `focus`、`sessionId`、`cwd`、`updatedAt` |
-| `sessions/<name>` | `sessionId`、`repo`、`cwd`、`tmux`、`task`、`lifecycle`: `running`｜`archived`｜`lost`｜`closed`、`spawnedAt`、`archiveRequestedAt`、`archivedAt`、`resumedAt` |
+| `sessions/<name>` | `sessionId`、`repo`、`cwd`、`tmux`、`task`、`model`、`effort`、`lifecycle`: `running`｜`archived`｜`lost`｜`closed`、`spawnedAt`、`archiveRequestedAt`、`archivedAt`、`resumedAt` |
 | `reports/<name>` | 子 session 寫，orchestrator 只讀 |
 | `decisions/D-NNN` | 見〈決策〉 |
 | `log/<id>` | `at`、`text`（一句話）、`kind`: `start`｜`done`｜`decision`｜`blocker`｜`note`、`ref`（session 名稱或 D 編號） |
@@ -149,7 +161,7 @@ worktree 一律保留，resume 要用它。
 
 ## 決策
 
-回覆裡出現「要不要／選哪個」時，同一輪開一張決策卡：
+回覆裡出現「要不要／選哪個」時，同一輪開一張決策卡（〈spawn〉第 4 步的模型確認除外）：
 1. 欄位：`status: "open"`、`title`、`question`、`context`、`recommendation`、`refs`、`options: [{key, label, detail, recommended}]`（最多 2 個，標一個 `recommended`）、`updatedAt`。編號用 `list decisions` 取最大號 +1。
 2. 寫入後發 `PushNotification`：`status: "proactive"`、`message: "【D-NNN】<question>"`。回覆「not sent」時就此結束。
 3. 回覆裡附 D 編號、兩個選項、建議哪個，請使用者在頁面按「複製回答」貼回。
@@ -161,4 +173,4 @@ worktree 一律保留，resume 要用它。
 - 刪 worktree。
 - 關掉不在 `sessions/` 裡的 tmux session。
 
-單一 session 的 spawn、archive、resume、close 是使用者明確下的指令，直接做。
+單一 session 的 spawn、archive、resume、close 是使用者明確下的指令，直接做；spawn 只在第 4 步停下來確認模型與 effort。

@@ -25,6 +25,8 @@ cleanup() {
   rm -rf "$TMP"
 }
 trap cleanup EXIT
+# argpair <args 檔> <旗標> <值>：args 檔裡有相鄰的兩行「旗標、值」。
+argpair() { awk -v f="$2" -v v="$3" 'prev == f && $0 == v { found = 1 } { prev = $0 } END { exit !found }' "$1"; }
 trust_repo() { jq -n --arg p "$REPO" '{projects: {($p): {hasTrustDialogAccepted: true}}}' > "$SO_CLAUDE_JSON"; }
 
 # --- uuid / trust ---
@@ -70,6 +72,15 @@ t "兩個活著的同名項目時 byname 回 8" code 8 "$SO" byname so-t-a
 t "procStart 相符的項目算 alive" [ "$("$SO" alive dup-id)" = "alive" ]
 rm -f "$SO_SESSIONS_DIR/2.json"
 t "同名再 spawn 回 3" code 3 "$SO" spawn so-t-a "$REPO" "$PROMPT"
+t "沒給模型與 effort 時不帶 --model、--effort" [ "$(grep -c -e '^--model$' -e '^--effort$' "$FAKE_LOG_DIR/so-t-a.args")" = 0 ]
+"$SO" spawn so-t-m "$REPO" "$PROMPT" sonnet high >/dev/null
+t "spawn 帶 --model 與 --effort" argpair "$FAKE_LOG_DIR/so-t-m.args" --model sonnet
+t "spawn 的 --effort 值正確" argpair "$FAKE_LOG_DIR/so-t-m.args" --effort high
+"$SO" spawn so-t-e "$REPO" "$PROMPT" "" low >/dev/null
+t "模型留空時只帶 --effort" [ "$(grep -c '^--model$' "$FAKE_LOG_DIR/so-t-e.args")" = 0 ] && argpair "$FAKE_LOG_DIR/so-t-e.args" --effort low
+t "effort 值不在清單裡時回 1" code 1 "$SO" spawn so-t-bad "$REPO" "$PROMPT" sonnet huge
+t "模型名稱有空白時回 1" code 1 "$SO" spawn so-t-bad "$REPO" "$PROMPT" "so net"
+t "參數錯誤時沒有建立 tmux session" code 1 tmux has-session -t "=so-t-bad"
 out=$("$SO" spawn so-t-plain "$PLAIN" "$PROMPT")
 t "非 git 目錄不加 -w" [ "$(sed -n 1p "$FAKE_LOG_DIR/so-t-plain.args")" = "-n" ]
 t "非 git 目錄的 cwd 就是該目錄" [ "$(printf '%s' "$out" | jq -r '.cwd')" = "$PLAIN" ]
@@ -97,6 +108,11 @@ t "resume 的 cwd 是 worktree" [ "$(printf '%s' "$out" | jq -r '.cwd')" = "$WT"
 t "claude 收到 -r <id> -n <name>" [ "$(sed -n 1,4p "$FAKE_LOG_DIR/so-t-a.args" | tr '\n' ' ')" = "-r $A_ID -n so-t-a " ]
 t "resume prompt 原樣送達" [ "$(cat "$FAKE_LOG_DIR/so-t-a.prompt")" = "$(cat "$RPROMPT")" ]
 t "還在執行時再 resume 回 7" code 7 "$SO" resume so-t-a "$A_ID" "$WT" "$RPROMPT"
+"$SO" stop "$A_ID" so-t-a >/dev/null
+"$SO" resume so-t-a "$A_ID" "$WT" "$RPROMPT" opus max >/dev/null
+t "resume 帶 --model 與 --effort" argpair "$FAKE_LOG_DIR/so-t-a.args" --model opus
+t "resume 的 --effort 值正確" argpair "$FAKE_LOG_DIR/so-t-a.args" --effort max
+t "resume 的 effort 值不在清單裡時回 1" code 1 "$SO" resume so-t-x "$A_ID" "$WT" "$RPROMPT" opus huge
 "$SO" stop "$A_ID" so-t-a >/dev/null
 tmux new-session -d -s so-t-a
 t "同名 tmux session 存在時 resume 回 3" code 3 "$SO" resume so-t-a "$A_ID" "$WT" "$RPROMPT"

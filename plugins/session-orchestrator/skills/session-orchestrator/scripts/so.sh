@@ -111,12 +111,28 @@ launcher() {
   echo "$f"
 }
 
+# model_args <model> <effort>：檢查後設定 MODEL_ARGS（傳給 claude 的 --model、--effort）。空字串表示不指定。
+model_args() {
+  MODEL_ARGS=()
+  case "$1" in
+    '') ;;
+    *[!a-zA-Z0-9.-]*) die 1 "模型名稱只能用英數、. 與 -：$1" ;;
+    *) MODEL_ARGS+=(--model "$1") ;;
+  esac
+  case "$2" in
+    '') ;;
+    low|medium|high|xhigh|max) MODEL_ARGS+=(--effort "$2") ;;
+    *) die 1 "effort 只能是 low、medium、high、xhigh、max：$2" ;;
+  esac
+}
+
 pane_tail() { tmux capture-pane -p -t "=$1:" 2>/dev/null | grep -v '^[[:space:]]*$' | tail -5; }
 
 cmd_spawn() {
-  [ $# -eq 3 ] || die 1 "用法：so.sh spawn <name> <repo> <prompt 檔>"
+  [ $# -ge 3 ] && [ $# -le 5 ] || die 1 "用法：so.sh spawn <name> <repo> <prompt 檔> [<model>] [<effort>]"
   local name="$1" repo="$2" pf="$3" trust dir uuid lf j
   valid_name "$name" || die 1 "名稱只能用小寫英數與 -，而且不能以 - 開頭：$name"
+  model_args "${4:-}" "${5:-}"
   [ -d "$repo" ] || die 5 "目錄不存在：$repo"
   [ -f "$pf" ] || die 1 "prompt 檔不存在：$pf"
   [ -n "$CLAUDE_BIN" ] || die 1 "找不到 claude 執行檔"
@@ -128,10 +144,10 @@ cmd_spawn() {
   cp "$pf" "$STATE_DIR/launch/$name.prompt"
   if [ "$trust" = "trusted" ]; then
     dir=$(git -C "$repo" rev-parse --show-toplevel)
-    lf=$(launcher "$name" "$STATE_DIR/launch/$name.prompt" -w "$name" -n "$name" --session-id "$uuid")
+    lf=$(launcher "$name" "$STATE_DIR/launch/$name.prompt" -w "$name" -n "$name" --session-id "$uuid" ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"})
   else
     dir=$(cd "$repo" && pwd -P)
-    lf=$(launcher "$name" "$STATE_DIR/launch/$name.prompt" -n "$name" --session-id "$uuid")
+    lf=$(launcher "$name" "$STATE_DIR/launch/$name.prompt" -n "$name" --session-id "$uuid" ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"})
   fi
   tmux new-session -d -s "$name" -c "$dir" "bash $(printf '%q' "$lf")" || die 1 "tmux new-session 失敗：$name"
   j=$(wait_live "$uuid") || die 4 "${WAIT_SECS} 秒內沒有在 registry 看到 ${uuid}（tmux session ${name} 保留著）。pane 最後幾行：$(pane_tail "$name")"
@@ -159,9 +175,10 @@ cmd_stop() {
 }
 
 cmd_resume() {
-  [ $# -eq 4 ] || die 1 "用法：so.sh resume <name> <sessionId> <cwd> <prompt 檔>"
+  [ $# -ge 4 ] && [ $# -le 6 ] || die 1 "用法：so.sh resume <name> <sessionId> <cwd> <prompt 檔> [<model>] [<effort>]"
   local name="$1" id="$2" cwd="$3" pf="$4" lf j
   valid_name "$name" || die 1 "名稱格式錯誤：${name}"
+  model_args "${5:-}" "${6:-}"
   [ -d "$cwd" ] || die 5 "cwd 不存在：${cwd}"
   [ -f "$pf" ] || die 1 "prompt 檔不存在：${pf}"
   [ -n "$CLAUDE_BIN" ] || die 1 "找不到 claude 執行檔"
@@ -169,7 +186,7 @@ cmd_resume() {
   if tmux has-session -t "=$name" 2>/dev/null; then die 3 "tmux session 已存在：${name}"; fi
   mkdir -p "$STATE_DIR/launch"
   cp "$pf" "$STATE_DIR/launch/$name.prompt"
-  lf=$(launcher "$name" "$STATE_DIR/launch/$name.prompt" -r "$id" -n "$name")
+  lf=$(launcher "$name" "$STATE_DIR/launch/$name.prompt" -r "$id" -n "$name" ${MODEL_ARGS[@]+"${MODEL_ARGS[@]}"})
   tmux new-session -d -s "$name" -c "$cwd" "bash $(printf '%q' "$lf")" || die 1 "tmux new-session 失敗：${name}"
   j=$(wait_live "$id") || die 4 "${WAIT_SECS} 秒內沒有在 registry 看到 ${id}（tmux session ${name} 保留著）。pane 最後幾行：$(pane_tail "$name")"
   printf '%s' "$j" | jq -c --arg tmux "$name" '. + {tmux: $tmux}'

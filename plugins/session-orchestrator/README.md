@@ -45,7 +45,7 @@ plugin 裡有兩個 skill：
 1. 在 tmux 裡用固定名稱開 orchestrator：`claude -n session-orchestrator`，再輸入 `/session-orchestrator:session-orchestrator`。名稱一定要是 `session-orchestrator`，子 session 只接受這個名稱送來的 `ARCHIVE`。
 2. 第一次使用時，orchestrator 會發布總表頁面，並把網址存在 `~/.claude/session-orchestrator/console-url`。之後都沿用同一頁。
 3. 用自然語言下指令：
-   - 「開一個 session 處理 <任務>」：spawn。repo 不明確時它會問你。
+   - 「開一個 session 處理 <任務>」：spawn。開之前它會依任務建議模型（`haiku`、`sonnet`、`opus`、`fable`）與 effort，等你確認；repo 不明確時也會問你。resume 時沿用同一組設定。
    - 「archive <名稱>」、「resume <名稱>」、「close <名稱>」。
    - 「status」：在終端機印出每個 session 的狀態。
    - 「archive all」：重開機前用，會先列清單請你確認。
