@@ -16,6 +16,10 @@ check $? 4 "連不上 → exit 4"
 TELECIPHER_TOKEN_FILE="$TOKEN_FILE" "$SH" --path ~/.ssh/x --mode file --description d >/dev/null 2>&1
 check $? 3 "拒絕路徑 → exit 3"
 
+TELECIPHER_TOKEN_FILE="$TOKEN_FILE" "$SH" --path ~/tmp/x --mode file --description d --wait-minutes 'a[$(touch /tmp/tc-injected)]' >/dev/null 2>&1
+check $? 7 "wait-minutes 非整數 → exit 7"
+[ ! -e /tmp/tc-injected ]; check $? 0 "wait-minutes 不會被當算式執行"
+
 out=$(TELECIPHER_TOKEN_FILE="$TOKEN_FILE" "$SH" --path ~/tmp/telecipher-sh-test/.env --mode env --key K --description d --wait-minutes 0 2>/dev/null)
 check $? 6 "wait 0 分 → TIMEOUT exit 6"
 echo "$out" | grep -q '^REGISTERED [a-z2-7]\{12\} ' ; check $? 0 "印 REGISTERED"

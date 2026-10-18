@@ -20,8 +20,11 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$PATH_ARG" ] && [ -n "$MODE" ] && [ -n "$DESC" ] || { echo "需要 --path --mode --description" >&2; exit 7; }
 [ "$MODE" = env ] && [ -z "$KEY" ] && { echo "env 模式需要 --key" >&2; exit 7; }
+case "$WAIT_MIN" in ''|*[!0-9]*) echo "--wait-minutes 需為非負整數" >&2; exit 7;; esac
 [ -r "$TOKEN_FILE" ] || { echo "找不到 ${TOKEN_FILE}。請在 telecipher repo 跑 bun run setup。" >&2; exit 2; }
-TOKEN="$(tr -d '\n' < "$TOKEN_FILE")"
+# token 不放進命令列參數（ps 看得到）：寫成 0600 的 header 檔，用 curl -H @file
+HDR="$(mktemp)"; chmod 600 "$HDR"; trap 'rm -f "$HDR"' EXIT
+printf 'x-telecipher-token: %s\n' "$(tr -d '\n' < "$TOKEN_FILE")" > "$HDR"
 
 if [ -z "$SESSION" ]; then
   SESSION="$(tmux display-message -p '#S' 2>/dev/null || true)"
@@ -34,7 +37,7 @@ BODY="{\"session\":\"$(json_escape "$SESSION")\",\"path\":\"$(json_escape "$PATH
 [ -n "$KEY" ] && BODY="$BODY,\"key\":\"$(json_escape "$KEY")\""
 BODY="$BODY}"
 
-RESP="$(curl -s -w '\n%{http_code}' -X POST -H "x-telecipher-token: $TOKEN" -H 'content-type: application/json' -d "$BODY" "$URL/api/requests" 2>/dev/null)"
+RESP="$(curl -s -w '\n%{http_code}' -X POST -H @"$HDR" -H 'content-type: application/json' -d "$BODY" "$URL/api/requests" 2>/dev/null)"
 CODE="$(printf '%s' "$RESP" | tail -1)"
 JSON="$(printf '%s' "$RESP" | sed '$d' | tr -d '\n')"
 # 連線失敗時 curl 仍印 write-out，http_code 是 000
@@ -54,7 +57,7 @@ while :; do
   NOW=$(date +%s)
   [ "$NOW" -lt "$DEADLINE" ] || { echo "TIMEOUT $ID"; exit 6; }
   LEFT=$(( DEADLINE - NOW )); T=55; [ "$LEFT" -lt 55 ] && T=$LEFT
-  W="$(curl -s --max-time $((T + 10)) -H "x-telecipher-token: $TOKEN" "$URL/api/requests/$ID/wait?timeout=$T" 2>/dev/null)"
+  W="$(curl -s --max-time $((T + 10)) -H @"$HDR" "$URL/api/requests/$ID/wait?timeout=$T" 2>/dev/null)"
   STATUS="$(printf '%s' "$W" | sed -n 's/.*"status": *"\([a-z]*\)".*/\1/p')"
   case "$STATUS" in
     fulfilled) echo "FULFILLED $ID"; exit 0;;
