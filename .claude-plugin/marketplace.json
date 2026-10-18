@@ -27,6 +27,17 @@
       "source": "./plugins/session-orchestrator",
       "category": "productivity",
       "homepage": "https://github.com/im-zac/zac-skills/tree/main/plugins/session-orchestrator"
+    },
+    {
+      "name": "telecipher",
+      "description": "session 需要 token／API key 時向 telecipher 登錄需求，使用者在 telecipher 頁面填值直接寫檔，值不經 Claude 對話。",
+      "author": {
+        "name": "im-zac",
+        "url": "https://github.com/im-zac"
+      },
+      "source": "./plugins/telecipher",
+      "category": "productivity",
+      "homepage": "https://github.com/im-zac/zac-skills/tree/main/plugins/telecipher"
     }
   ]
 }
