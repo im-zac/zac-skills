@@ -15,15 +15,16 @@ description: 需要使用者提供 token、API key、密碼、憑證檔等敏感
    - 路徑必須在使用者 home 內。`~/.ssh`、`~/Library`、shell rc、`~/.claude/settings*` 會被拒絕。
 2. 用 Bash 的 `run_in_background: true` 執行（前景 Bash 有 10 分鐘上限，使用者可能一小時後才填）：
    ```bash
-   bash ${CLAUDE_SKILL_DIR}/scripts/request.sh --path ~/dev/app/.env --mode env --key OPENAI_API_KEY --description "OpenAI API key，給 app 的 LLM 呼叫用"
+   bash ${CLAUDE_SKILL_DIR}/scripts/request.sh --path /Users/me/dev/app/.env --mode env --key OPENAI_API_KEY --description "OpenAI API key，給 app 的 LLM 呼叫用"
    ```
-   `--description` 一句話說明用途，1–500 字。`--session` 預設取 tmux session 名，可覆寫。`--wait-minutes` 預設 120。
+   `--path` 用絕對路徑；相對路徑以執行時的 cwd 為準。`--description` 一句話說明用途，1–500 字。`--session` 預設取 tmux session 名，可覆寫。`--wait-minutes` 預設 120。
 3. 立刻告訴使用者：「已向 telecipher 登錄需求，請到 telecipher 填 OPENAI_API_KEY（寫入 ~/dev/app/.env）」。繼續做不依賴這個值的工作。
 4. 背景任務結束時看 stdout 最後一行與 exit code：
    - `FULFILLED <id>`（exit 0）→ 值已在目標檔，繼續。
    - `CANCELLED <id>`（exit 5）→ 使用者取消了，問使用者下一步。
    - `TIMEOUT <id>`（exit 6）→ 告訴使用者需求還在 telecipher 待處理，可再跑一次等待。
-   - exit 2／3／4 → 把 stderr 的訊息告訴使用者（缺 token、路徑被拒、telecipher 未啟動）。
+   - exit 8 → 需求已不存在（使用者清除了已處理清單，或 server 重啟）。檔案可能已寫好：告訴使用者，請他確認。
+   - exit 2／3／4 → 把 stderr 的訊息告訴使用者（token 問題、路徑被拒、telecipher 未啟動）。
 
 ## 禁止
 

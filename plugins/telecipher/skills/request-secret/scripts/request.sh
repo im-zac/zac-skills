@@ -2,7 +2,7 @@
 # 向 telecipher 登錄 secret 需求並等待完成。值永遠不經過這支腳本。
 # 用法：request.sh --path <path> --mode file|env [--key KEY] --description "<text>" [--session <name>] [--wait-minutes 120]
 # stdout：REGISTERED <id> <path>，然後 FULFILLED <id> | CANCELLED <id> | TIMEOUT <id>
-# exit：0 fulfilled｜2 缺 token／token 不被接受｜3 登錄被拒（400）｜4 連不上｜5 cancelled｜6 timeout｜7 參數錯
+# exit：0 fulfilled｜2 缺 token／token 不被接受｜3 登錄被拒（400）｜4 連不上｜5 cancelled｜6 timeout｜7 參數錯｜8 需求不存在（被清除或 server 重啟後遺失）
 set -u
 URL="${TELECIPHER_URL:-http://127.0.0.1:9877}"
 TOKEN_FILE="${TELECIPHER_TOKEN_FILE:-$HOME/.telecipher/token}"
@@ -21,6 +21,8 @@ done
 [ -n "$PATH_ARG" ] && [ -n "$MODE" ] && [ -n "$DESC" ] || { echo "需要 --path --mode --description" >&2; exit 7; }
 [ "$MODE" = env ] && [ -z "$KEY" ] && { echo "env 模式需要 --key" >&2; exit 7; }
 case "$WAIT_MIN" in ''|*[!0-9]*) echo "--wait-minutes 需為非負整數" >&2; exit 7;; esac
+# 相對路徑以呼叫端 cwd 為準（server 端會把相對路徑當成相對 $HOME）
+case "$PATH_ARG" in /*|~*) ;; *) PATH_ARG="$PWD/$PATH_ARG";; esac
 [ -r "$TOKEN_FILE" ] || { echo "找不到 ${TOKEN_FILE}。請在 telecipher repo 跑 bun run setup。" >&2; exit 2; }
 # token 不放進命令列參數（ps 看得到）：寫成 0600 的 header 檔，用 curl -H @file
 HDR="$(mktemp)"; chmod 600 "$HDR"; trap 'rm -f "$HDR"' EXIT
@@ -57,12 +59,17 @@ while :; do
   NOW=$(date +%s)
   [ "$NOW" -lt "$DEADLINE" ] || { echo "TIMEOUT $ID"; exit 6; }
   LEFT=$(( DEADLINE - NOW )); T=55; [ "$LEFT" -lt 55 ] && T=$LEFT
-  W="$(curl -s --max-time $((T + 10)) -H @"$HDR" "$URL/api/requests/$ID/wait?timeout=$T" 2>/dev/null)"
-  STATUS="$(printf '%s' "$W" | sed -n 's/.*"status": *"\([a-z]*\)".*/\1/p')"
+  WR="$(curl -s -w '\n%{http_code}' --max-time $((T + 10)) -H @"$HDR" "$URL/api/requests/$ID/wait?timeout=$T" 2>/dev/null)"
+  WCODE="$(printf '%s' "$WR" | tail -1)"
+  case "$WCODE" in
+    404) echo "需求不存在（${ID}）：可能已被清除，或 server 重啟後遺失。若檔案已寫入就不必重試。" >&2; exit 8;;
+    401) echo "token 不被接受。重跑 bun run setup 同步 ~/.telecipher/token。" >&2; exit 2;;
+  esac
+  STATUS="$(printf '%s' "$WR" | sed '$d' | tr -d '\n' | sed -n 's/.*"status": *"\([a-z]*\)".*/\1/p')"
   case "$STATUS" in
     fulfilled) echo "FULFILLED $ID"; exit 0;;
     cancelled) echo "CANCELLED $ID"; exit 5;;
     pending) ;;
-    *) sleep 5;;   # 連線中斷：稍後重試，直到 deadline
+    *) sleep 5;;   # 連線中斷或其他狀態碼：稍後重試，直到 deadline
   esac
 done
