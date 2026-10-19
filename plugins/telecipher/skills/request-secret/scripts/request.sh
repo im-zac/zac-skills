@@ -37,8 +37,14 @@ if [ -z "$SESSION" ]; then
   [ -n "$SESSION" ] || SESSION="$(basename "$PWD")"
 fi
 
-# 跳脫 \ 與 "；換行改成空白（description 應為一句話）
-json_escape() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | tr '\n' ' '; }
+# 跳脫 \ 與 "，tab／CR 轉成 \t \r；換行改成空白（description 應為一句話）
+# 用 bash 參數展開，不靠 BSD／GNU sed 對 \t 的差異
+json_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"; s="${s//\"/\\\"}"
+  s="${s//$'\t'/\\t}"; s="${s//$'\r'/\\r}"; s="${s//$'\n'/ }"
+  printf '%s' "$s"
+}
 BODY="{\"session\":\"$(json_escape "$SESSION")\",\"path\":\"$(json_escape "$PATH_ARG")\",\"mode\":\"$MODE\",\"description\":\"$(json_escape "$DESC")\""
 [ -n "$KEY" ] && BODY="$BODY,\"key\":\"$(json_escape "$KEY")\""
 BODY="$BODY}"

@@ -37,6 +37,13 @@ echo "$out" | tail -1 | grep -q '^TIMEOUT ' ; check $? 0 "最後一行 TIMEOUT"
 id=$(echo "$out" | grep '^REGISTERED' | awk '{print $2}')
 curl -s -X DELETE -H 'x-telecipher-token: devtoken' "$URL/api/requests/$id" >/dev/null
 
+# json_escape：description 含 tab 與 \r 也要是合法 JSON，且原樣送達
+out=$(TELECIPHER_TOKEN_FILE="$TOKEN_FILE" "$SH" --path ~/tmp/telecipher-sh-test/.env --mode env --key TAB --description "$(printf 'a\tb\rc')" --wait-minutes 0 2>/dev/null)
+check $? 6 "description 含 tab／CR → 登錄成功（TIMEOUT exit 6）"
+id=$(echo "$out" | grep '^REGISTERED' | awk '{print $2}')
+curl -s -H 'x-telecipher-token: devtoken' "$URL/api/requests/$id" | grep -qF '"description":"a\tb\rc"'; check $? 0 "tab／CR 轉義為 \\t \\r 原樣送達"
+curl -s -X DELETE -H 'x-telecipher-token: devtoken' "$URL/api/requests/$id" >/dev/null
+
 # fulfill 路徑：背景跑 request.sh，1 秒後 fulfill
 TELECIPHER_TOKEN_FILE="$TOKEN_FILE" "$SH" --path ~/tmp/telecipher-sh-test/.env --mode env --key K2 --description d --wait-minutes 1 > /tmp/tc-req-out.txt 2>/dev/null &
 pid=$!
