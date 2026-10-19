@@ -24,6 +24,12 @@ TELECIPHER_TOKEN_FILE="$TOKEN_FILE" "$SH" --path ~/tmp/x --mode file --descripti
 check $? 7 "wait-minutes 非整數 → exit 7"
 [ ! -e /tmp/tc-injected ]; check $? 0 "wait-minutes 不會被當算式執行"
 
+for flag in --path --mode --key --description --session --wait-minutes; do
+  TELECIPHER_TOKEN_FILE="$TOKEN_FILE" "$SH" --path ~/tmp/x --mode file --description d $flag >/dev/null 2>/tmp/tc-err.txt
+  check $? 7 "最後一個參數 $flag 缺值 → exit 7"
+  grep -q "缺值" /tmp/tc-err.txt; check $? 0 "$flag 缺值有中文訊息"
+done
+
 out=$(TELECIPHER_TOKEN_FILE="$TOKEN_FILE" "$SH" --path ~/tmp/telecipher-sh-test/.env --mode env --key K --description d --wait-minutes 0 2>/dev/null)
 check $? 6 "wait 0 分 → TIMEOUT exit 6"
 echo "$out" | grep -q '^REGISTERED [a-z2-7]\{12\} ' ; check $? 0 "印 REGISTERED"

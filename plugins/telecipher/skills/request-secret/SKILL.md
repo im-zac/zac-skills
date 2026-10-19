@@ -25,6 +25,7 @@ description: 需要使用者提供 token、API key、密碼、憑證檔等敏感
    - `TIMEOUT <id>`（exit 6）→ 告訴使用者需求還在 telecipher 待處理，可再跑一次等待。
    - exit 8 → 需求已不存在（使用者清除了已處理清單，或 server 重啟）。檔案可能已寫好：告訴使用者，請他確認。
    - exit 2／3／4 → 把 stderr 的訊息告訴使用者（token 問題、路徑被拒、telecipher 未啟動）。
+   - exit 7 → 參數錯（缺必要參數、參數缺值、`--wait-minutes` 非整數）。看 stderr 修正指令後重跑。
 
 ## 禁止
 

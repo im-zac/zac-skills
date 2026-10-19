@@ -9,6 +9,10 @@ TOKEN_FILE="${TELECIPHER_TOKEN_FILE:-$HOME/.telecipher/token}"
 PATH_ARG=""; MODE=""; KEY=""; DESC=""; SESSION=""; WAIT_MIN=120
 while [ $# -gt 0 ]; do
   case "$1" in
+    --path|--mode|--key|--description|--session|--wait-minutes)
+      [ $# -ge 2 ] || { echo "參數 $1 缺值" >&2; exit 7; };;
+  esac
+  case "$1" in
     --path) PATH_ARG="$2"; shift 2;;
     --mode) MODE="$2"; shift 2;;
     --key) KEY="$2"; shift 2;;
