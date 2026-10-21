@@ -1,0 +1,18 @@
+{
+  "name": "task-orchestrator",
+  "description": "派工主控 session：查證、派工給 subagent、抽查、走 PR，並在 worklog 頁面維護派工主控台。專案的 tracker、repo、流程寫在設定檔。",
+  "author": {
+    "name": "im-zac",
+    "url": "https://github.com/im-zac"
+  },
+  "homepage": "https://github.com/im-zac/zac-skills/tree/main/plugins/task-orchestrator",
+  "repository": "https://github.com/im-zac/zac-skills",
+  "license": "MIT",
+  "keywords": [
+    "orchestrator",
+    "dispatch",
+    "subagent",
+    "worklog",
+    "pull-request"
+  ]
+}

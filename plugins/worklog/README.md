@@ -45,6 +45,8 @@ Claude Code skill。把一個 session 的工作、進度、決策記在一個隨
 
 資料格式（`meta/session`、`items/<id>`、`log/<id>`、`decisions/D-NNN`）見 `skills/worklog/SKILL.md` 的〈資料〉。
 
+[`task-orchestrator`](../task-orchestrator/) 用標題引用 `SKILL.md` 的〈資料〉〈決策〉〈何時寫入〉〈通知〉〈寫入方式〉。改這五個標題時，要一起改 task-orchestrator。
+
 ## 授權
 
 MIT，見 repo 根目錄的 [`LICENSE`](../../LICENSE)。
